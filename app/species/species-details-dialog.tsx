@@ -114,6 +114,58 @@ export default function SpeciesDetailsDialog({ species, currentUser }: { species
     setIsEditing(false);
   };
 
+  const onDelete = async () => {
+    if (!window.confirm("Are you sure you want to delete this species?")) {
+      return;
+    }
+
+    if (species.author !== currentUser) {
+      toast({
+        title: "Permission denied.",
+        description: "You are not authorized to delete this species.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const supabase = createBrowserSupabaseClient();
+    const { error } = await supabase.from("species").delete().eq("id", species.id);
+
+    if (error) {
+      toast({
+        title: "Error deleting species.",
+        description: error.message,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Optionally perform any additional cleanup or navigation after deletion
+
+    toast({
+      title: "Species deleted.",
+      description: "The species has been successfully deleted.",
+      variant: "destructive",
+    });
+
+    // Assuming you want to close the dialog after deletion, you can add setIsEditing(false) here
+    setIsEditing(false);
+
+    // Optionally, you can navigate or refresh the page after deletion
+    router.refresh();
+  };
+
+  const handleDeleteClick = () => {
+    // Wrap the asynchronous onDelete function in a synchronous function
+    // to handle the asynchronous behavior within the event handler
+
+    onDelete().catch((error) => {
+      console.error("Error deleting species:", error);
+    });
+  };
+
+  const isUserOwner = species.author === currentUser;
+
   return (
     <Dialog>
       <DialogTrigger asChild>
@@ -239,7 +291,7 @@ export default function SpeciesDetailsDialog({ species, currentUser }: { species
                   );
                 }}
               />
-              {species.author === currentUser && (
+              {isUserOwner && (
                 <div className="flex">
                   {isEditing ? (
                     <>
@@ -248,6 +300,14 @@ export default function SpeciesDetailsDialog({ species, currentUser }: { species
                       </Button>
                       <Button onClick={handleCancel} type="button" className="ml-1 mr-1 flex-auto" variant="secondary">
                         Cancel
+                      </Button>
+                      <Button
+                        onClick={() => handleDeleteClick()}
+                        type="button"
+                        className="ml-1 mr-1 flex-auto"
+                        variant="destructive"
+                      >
+                        Delete
                       </Button>
                     </>
                   ) : (
